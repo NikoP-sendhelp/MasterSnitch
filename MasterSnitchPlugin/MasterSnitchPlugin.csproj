@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Version>1.0</Version>
+    <Title>MasterSnitchPlugin</Title>
+    <Description>Description of MasterSnitchPlugin</Description>
+    <TargetExt>.rhp</TargetExt>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedResources\**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    <PackageReference Include="RhinoCommon" Version="7.32.23221.10241" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SnitchCommon\SnitchCommon.csproj" />
+    <ProjectReference Include="..\SnitchDatabaseV2\SnitchDatabaseV2.csproj" />
+    <ProjectReference Include="..\SnitchIFC\SnitchIFC.csproj" />
+  </ItemGroup>
+  
+</Project>
