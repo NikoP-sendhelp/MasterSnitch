@@ -28,8 +28,6 @@ namespace SnitchCommon.Elements.Base
         public Point3d CenterPoint { get; set; }
 
         public string Name { get; set; }
-        public double Volume_concrete_m3 { get; set; }
-        public double Mass_steel_m3 { get; set; }
         public double Height { get; set; }
         public double Length { get; set; }
         public double Weight { get; set; }
@@ -41,6 +39,12 @@ namespace SnitchCommon.Elements.Base
         public double Net_surface_area { get; set; }
         public string Bottom_elevation { get; set; }
         public string Top_elevation { get; set; }
+        public double Resultant_load { get; set; }
+        public string Material_name { get; set; }
+
+        public string Project_name { get; set; }
+
+        public double CO2_Value { get; set; }
 
         public int FloorNo { get; set; }
         public double g { get; set; }
@@ -50,6 +54,7 @@ namespace SnitchCommon.Elements.Base
         {
             this.Guid = Guid.NewGuid();
             this.g = 9.81;
+            this.CO2_Value = 0;
         }
 
         //------------------------ SETTERS ---------------------------
@@ -74,6 +79,12 @@ namespace SnitchCommon.Elements.Base
             }
             SetWeight();
             return this.Weight;
+        }
+
+        public string GetMaterialCode()
+        {
+            int index = this.Material_name.IndexOf('/') + 1;
+            return this.Material_name.Substring(index);
         }
     }
 }

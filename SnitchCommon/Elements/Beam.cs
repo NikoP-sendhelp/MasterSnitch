@@ -20,21 +20,29 @@ namespace SnitchCommon.Elements
 
         public double LoadBearingWidth { get; set; }
 
-        public double Load { get; set; }
-
         public List<Column> ConnectedColumns { get; set; } = new List<Column>();
+        public List<Beam> ConnectedBeams { get; set; } = new List<Beam>();
+
+        public double LengthLoad {  get; set; }
+        public double Live_load { get; set; }
 
         //------------------------ METHODS ---------------------------
 
-        public double CalculateLoad(double liveLoad)
+        public double CalculateResultantLoad(double liveLoad)
         {
-            this.Load = GetWeight();
-            this.Load += ((LoadBearingWidth / 1000) * (this.Length / 1000)) * liveLoad; // convert mm to m
-
-            return Load;
+            this.Resultant_load = GetWeight();
+            this.Resultant_load += ((LoadBearingWidth / 1000) * (this.Length / 1000)) * liveLoad; // convert mm to m
+            this.Live_load = ((LoadBearingWidth / 1000) * (this.Length / 1000)) * liveLoad; // convert mm to m
+            this.SetLengthLoad();
+            return Resultant_load;
         }
 
+
         //------------------------ SETTERS ---------------------------
+        private void SetLengthLoad()
+        {
+            this.LengthLoad = this.Resultant_load / this.Length;
+        }
 
         //------------------------ GETTERS ---------------------------
     }

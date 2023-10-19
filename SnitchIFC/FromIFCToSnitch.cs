@@ -1,24 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Xbim.Ifc;
-using Xbim.Ifc4.Interfaces;
 using Xbim.Ifc2x3.GeometryResource;
-using Xbim.Ifc.Extensions;
 using Xbim.Ifc2x3.SharedBldgElements;
-using Xbim.Ifc2x3.GeometricModelResource;
 using Xbim.Ifc2x3.GeometricConstraintResource;
 using Rhino.Geometry;
 using SnitchCommon.Building;
 using SnitchCommon.Elements;
-using System.Xml.Linq;
 using System.Reflection;
-using Rhino;
+using Xbim.Ifc;
+using Xbim.Ifc2x3.Interfaces;
+using Xbim.Ifc2x3.Kernel;
+using Xbim.Ifc2x3.PropertyResource;
+using Xbim.ModelGeometry.Scene;
+using Microsoft.Isam.Esent.Interop;
 using Xbim.Common.Geometry;
+using Xbim.Common.XbimExtensions;
 
 namespace SnitchIFC
 {
@@ -40,31 +38,25 @@ namespace SnitchIFC
                 "Top elevation"
             };
 
-        public static Building ImportIFC(string filePath)
+        public static int iteration = 0;
+
+        public static Building ImportIFCLines(string filePath)
         {
+            iteration = 0;
 
             Building building = new Building();
             StringBuilder sb = new StringBuilder();
 
 
-
             using (var model = IfcStore.Open(filePath))
             {
-                // Check if project exists
+                // Get project name
                 string projectName = Path.GetFileNameWithoutExtension(filePath);
 
-                // Create list of all elements (Empty for now)
-                var allElements = new Dictionary<string, List<IIfcElement>>();
-
-                allElements["Beams"] = model.Instances.OfType<IIfcBeam>().Cast<IIfcElement>().ToList();
-                allElements["Columns"] = model.Instances.OfType<IIfcColumn>().Cast<IIfcElement>().ToList();
-                allElements["Slabs"] = model.Instances.OfType<IIfcSlab>().Cast<IIfcElement>().ToList();
-                allElements["Walls"] = model.Instances.OfType<IIfcWall>().Cast<IIfcElement>().ToList();
-
-                var test2 = model.Instances.OfType<IIfcElement>().ToList();
+                var allElements = model.Instances.OfType<IIfcElement>().ToList();
                 int c = 0;
                 int b = 0;
-                foreach (IIfcElement ifcElement in test2)
+                foreach (IIfcElement ifcElement in allElements)
                 {
                     IfcLocalPlacement temp = (IfcLocalPlacement)ifcElement.ObjectPlacement;
                     IfcAxis2Placement3D placement = (IfcAxis2Placement3D)temp.RelativePlacement;
@@ -75,10 +67,11 @@ namespace SnitchIFC
                             b++;
                             Beam beam = new Beam();
                             beam.SetName($"Beam {b}");
-                            setElementProperties(ifcElement, beam);
+                            SetElementProperties(ifcElement, beam);
                             (Point3d bPt1, Point3d bPt2) = BeamCenterLineStartAndEndPoints(placement, beam.Length);
                             beam.CenterLine = new Line(bPt1, bPt2);
                             beam.CenterPoint = beam.CenterLine.PointAt(0.5);
+                            beam.Project_name = projectName;
                             building.Beams.Add(beam.Guid, beam);
                             break;
 
@@ -86,10 +79,11 @@ namespace SnitchIFC
                             c++;
                             Column column = new Column();
                             column.SetName($"Column {c}");
-                            setElementProperties(ifcElement, column);
+                            SetElementProperties(ifcElement, column);
                             (Point3d cPt1, Point3d cPt2) = ColumnCenterLineStartAndEndPoints(placement, column.Length);
                             column.CenterLine = new Line(cPt1, cPt2);
                             column.CenterPoint = column.CenterLine.PointAt(0.5);
+                            column.Project_name = projectName;
                             building.Columns.Add(column.Guid, column);
                             break;
                         /*
@@ -105,6 +99,7 @@ namespace SnitchIFC
             }
             return building;
         }
+
 
         private static Point3d CartesianPointToPoint3d(IfcCartesianPoint location)
         {
@@ -146,25 +141,40 @@ namespace SnitchIFC
         }
 
 
-        private static void setElementProperties(IIfcElement ifcElement, object element)
+        private static void SetElementProperties(IIfcElement ifcElement, object element)
         {
+
             var properties = ifcElement.IsDefinedBy
-                            .Where(r => r.RelatingPropertyDefinition is IIfcPropertySet)
-                            .SelectMany(r => ((IIfcPropertySet)r.RelatingPropertyDefinition).HasProperties)
-                            .OfType<IIfcPropertySingleValue>();
+                            .OfType<IfcRelDefinesByProperties>()
+                            .SelectMany(r => r.RelatingPropertyDefinition.PropertySetDefinitions)
+                            .OfType<IfcPropertySet>()
+                            .SelectMany(p => p.HasProperties);
+
+            IIfcMaterial material = ifcElement.HasAssociations
+                            .OfType<IIfcRelAssociatesMaterial>()
+                            .Select(r => ((IIfcMaterial)r.RelatingMaterial)).First();
+
+            PropertyInfo materialInfo = element.GetType().GetProperty("Material_name");
+            materialInfo?.SetValue(element, material.Name.ToString());
 
             foreach (var property in properties)
             {
                 if (wantedProperties.Contains(property.Name))
                 {
-                    string propertyName = property.Name.ToString().Replace(" ", "_");
-                    if (propertyName == "Weight")
+                    var singleValue = (IfcPropertySingleValue)property;
+                    string singleValueName= singleValue.Name.ToString().Replace(" ", "_");
+                    if (singleValueName == "Weight")
                     {
-                        propertyName = "Mass";
+                        singleValueName = "Mass";
                     }
-                    PropertyInfo propertyInfo = element.GetType().GetProperty(propertyName);
-                    propertyInfo?.SetValue(element, property.NominalValue.Value);
+                    PropertyInfo propertyInfo = element.GetType().GetProperty(singleValueName);
+                    propertyInfo?.SetValue(element, singleValue.NominalValue.Value);
                 }
+            }
+
+            if (ifcElement is IfcColumn)
+            {
+                iteration = 1;
             }
         }
     }

@@ -27,12 +27,12 @@ namespace SnitchCommon.Building
             this.FloorLoad = 0;
             foreach (Beam beam in this.Beams)
             {
-                this.FloorLoad += beam.Load;
+                this.FloorLoad += beam.Resultant_load;
             }
 
             foreach (Column column in this.Columns)
             {
-                this.FloorLoad += column.Load;
+                this.FloorLoad += column.Resultant_load;
             }
         }
 
@@ -40,12 +40,12 @@ namespace SnitchCommon.Building
         {
             foreach (var beam in this.Beams)
             {
-                this.FloorLoad += beam.Load;
+                this.FloorLoad += beam.Resultant_load;
             }
 
             foreach (var column in this.Columns)
             {
-                this.FloorLoad += column.Load;
+                this.FloorLoad += column.Resultant_load;
             }
         }
 

@@ -50,7 +50,14 @@ namespace SnitchCommon.Building
         {
             foreach (Beam beam in this.Beams.Values)
             {
-                beam.Load = beam.CalculateLoad(this.DistributedLoad_live);
+                beam.Resultant_load = beam.CalculateResultantLoad(this.DistributedLoad_live);
+                if (beam.ConnectedBeams != null && beam.ConnectedColumns != null)
+                {
+                    foreach (Beam connectedBeam in beam.ConnectedBeams)
+                    {
+                        beam.Resultant_load += connectedBeam.GetWeight() / 2;
+                    }
+                }
             }
         }
 
@@ -60,20 +67,36 @@ namespace SnitchCommon.Building
 
             foreach (Column column in sortedColumns)
             {
-                column.CalculateLoad();
+                column.CalculateResultantLoad();
             }
+        }
+
+        public bool CheckIfSteel(string ClassName)
+        {
+            return ClassName.IndexOf("steel", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public void ConnectColumnsAndBeams()
         {
-            foreach (Column column in this.Columns.Values)
+            List<Column> columns = this.Columns.Values.ToList();
+            foreach (Column column in columns)
             {
                 Point3d startPoint = column.CenterLine.To;
-                foreach (Column column2 in this.Columns.Values)
+                foreach (Column column2 in columns)
                 {
                     if (column == column2) { continue; }
 
                     Point3d endPoint = column2.CenterLine.From;
+                    if (CheckIfSteel(column2.Material_name))
+                    {
+                        if (startPoint.DistanceTo(column2.CenterLine.To) <= this.MOE && column.CenterLine.From.DistanceTo(endPoint) <= this.MOE)
+                        {
+                            column.SetColumnPart(column2);
+                            this.Columns.Remove(column2.Guid);
+                            continue;
+                        }
+                    }
+
                     if (startPoint.DistanceTo(endPoint) <= this.MOE)
                     {
                         column.AboveColumn = column2;
@@ -88,6 +111,21 @@ namespace SnitchCommon.Building
                     {
                         column.ConnectedBeams.Add(beam);
                         beam.ConnectedColumns.Add(column);
+                    }
+                }
+            }
+
+            // Connect Beams
+            foreach (Beam beam in this.Beams.Values)
+            {
+                Line beamLine = beam.CenterLine;
+                foreach (Beam beam2 in this.Beams.Values)
+                {
+                    Line beam2Line = beam2.CenterLine;
+                    if (beam == beam2) { continue; }
+                    if (Intersection.LineLine(beamLine, beam2Line,out _, out _, this.MOE, true))
+                    {
+                        beam.ConnectedBeams.Add(beam2);
                     }
                 }
             }
@@ -122,11 +160,11 @@ namespace SnitchCommon.Building
                 Vector3d v2 = Vector3d.CrossProduct(centerLine.Direction, -Vector3d.ZAxis);
 
                 Line l1 = new Line(centerPt, v1 * 5);
-                // RhinoDoc.ActiveDoc.Objects.AddLine(l1);
+                Rhino.RhinoDoc.ActiveDoc.Objects.AddLine(l1);
                 double minDistance1 = CalculateMinDistance(centerLines, centerPt, l1);
 
                 Line l2 = new Line(centerPt, v2 * 5);
-                // RhinoDoc.ActiveDoc.Objects.AddLine(l2);
+                Rhino.RhinoDoc.ActiveDoc.Objects.AddLine(l2);
                 double minDistance2 = CalculateMinDistance(centerLines, centerPt, l2);
 
                 beam.LoadBearingWidth = minDistance1 / 2 + minDistance2 / 2;
