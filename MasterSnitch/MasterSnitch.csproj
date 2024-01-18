@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net7.0;net48</TargetFrameworks>
+    <Version>1.0</Version>
+    <Title>MasterSnitch</Title>
+    <Description>Description of MasterSnitch</Description>
+    <TargetExt>.rhp</TargetExt>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedResources\**\*" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="RhinoCommon" Version="8.4.24009.13521-rc" IncludeAssets="compile;build" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\SnitchCO2\SnitchCO2.csproj" />
+    <ProjectReference Include="..\SnitchCommon\SnitchCommon.csproj" />
+    <ProjectReference Include="..\SnitchDB\SnitchDB.csproj" />
+    <ProjectReference Include="..\SnitchIFC\SnitchIFC.csproj" />
+  </ItemGroup>
+  
+</Project>
